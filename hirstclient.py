@@ -82,7 +82,6 @@ def dl_progress(close=False):
     #pbar.close()
 
 
-sys.stdout.write("\n")
 ##### DEFINE USER COMMANDS BELOW #####
 
 def ls(arg1,arg2=False):
@@ -90,10 +89,6 @@ def ls(arg1,arg2=False):
         connect()
         output = session.list(arg1)
         t = Texttable()
-        if arg2 == True:
-            t.header(['','Name','Size','Type','Last Modified'])
-        elif arg2 == False:
-            t.header(['','Name','Size'])
         for i in output:
             if arg2 == True:
                 if i.is_dir() == True:
@@ -105,7 +100,7 @@ def ls(arg1,arg2=False):
                     t.add_row(["d",bcolors.BLUE + i.get_name() + bcolors.DEFAULT,""])
                 if i.is_dir() == False:
                     t.add_row(["",bcolors.DEFAULT + i.get_name() + bcolors.DEFAULT,humanize.naturalsize(i.get_size())])
-        t.set_deco(t.HEADER | t.VLINES)
+        t.set_deco(t.VLINES)
         print t.draw()
     except:
         print "Error: could not list dir"
