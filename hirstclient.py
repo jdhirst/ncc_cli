@@ -6,8 +6,18 @@ import subprocess
 import getpass
 import ConfigParser
 import base64
+import time
+import humanize
+import multiprocessing
+import tqdm
 import owncloud as nclib
+from texttable import Texttable
 from os.path import expanduser
+
+class bcolors:
+    BLUE = '\033[34m'
+    DEFAULT = '\033[39m'
+    YELLOW = '\033[93m'
 
 home = expanduser("~")
 if os.name == 'nt':
@@ -49,42 +59,72 @@ def connect():
     session = nclib.Client('https://hirst.cloud/')
     session.login(cfguser,cfgpass)
 
-##### DEFINE COMMANDS BELOW #####
+def dl_getsize():
+    global dl_rsize
+    global dl_lsize
+    fobj = session.file_info(dl_lpath)
+    dl_rsize = fobj.get_size()
 
-def ls(arg1):
+def dl_progress(close=False):
+    dl_lsize = 1
+    #pbar = tqdm(total=100)
+    while dl_lsize < dl_rsize:
+        if os.path.exists(dl_lpath):
+            time.sleep(1.0)
+            dl_lsize = os.path.getsize(dl_lpath)
+        else:
+            time.sleep(1.0)
+        percent = dl_rsize / dl_lsize * 100
+        print dl_rsize
+        print dl_lsize
+        print percent
+        #pbar.update(10)
+    #pbar.close()
+
+
+sys.stdout.write("\n")
+##### DEFINE USER COMMANDS BELOW #####
+
+def ls(arg1,arg2=False):
     try:
         connect()
         output = session.list(arg1)
-        print output
+        t = Texttable()
+        if arg2 == True:
+            t.header(['','Name','Size','Type','Last Modified'])
+        elif arg2 == False:
+            t.header(['','Name','Size'])
+        for i in output:
+            if arg2 == True:
+                if i.is_dir() == True:
+                    t.add_row(["d",i.get_name(),"",i.get_content_type(),i.get_last_modified()])
+                if i.is_dir() == False:
+                    t.add_row(["",i.get_name(),humanize.naturalsize(i.get_size()),i.get_content_type(),i.get_last_modified()])
+            elif arg2 == False:
+                if i.is_dir() == True:
+                    t.add_row(["d",bcolors.BLUE + i.get_name() + bcolors.DEFAULT,""])
+                if i.is_dir() == False:
+                    t.add_row(["",bcolors.DEFAULT + i.get_name() + bcolors.DEFAULT,humanize.naturalsize(i.get_size())])
+        t.set_deco(t.HEADER | t.VLINES)
+        print t.draw()
     except:
         print "Error: could not list dir"
-    # TODO: parse file output in a pretty way
 
-def put(arg1,arg2):
+def put(arg1,arg2='/'):
     try:
-        print "Uploading " + arg1 + " to " + arg2
+        print "Uploading " + arg1
         connect()
         session.put_file(arg2,arg1)
+
         print "Upload Complete"
 
     except:
         print "Error: could not upload file"
     # TODO: progress indication
 
-def get(arg1,arg2):
+def putdir(arg1,arg2='/'):
     try:
-        print "Downloading " + arg1 + " to " + arg2
-        connect()
-        session.get_file(arg2,arg1)
-        print "Download Complete"
-
-    except:
-        print "Error: could not download file"
-    # TODO: progress indication
-
-def putdir(arg1,arg2):
-    try:
-        print "Uploading directory " + arg1 + " to " + arg2
+        print "Uploading directory " + arg1
         connect()
         session.put_directory(arg2,arg1)
         print "Upload Complete"
@@ -93,11 +133,34 @@ def putdir(arg1,arg2):
         print "Error: could not upload directory"
     # TODO: progress indication
 
-def getdir(arg1,arg2):
+def getproc():
+    #try:
+    print "Downloading " + getarg1
+    session.get_file(getarg1,getarg2)
+    print "Download Complete"
+    #except:
+    #    print "Error: could not download file"
+    # TODO: progress indication
+
+def get(arg1,arg2=None):
+    global getarg1
+    global getarg2
+    getarg1 = arg1
+    getarg2 = arg2
+    connect()
+    dl_getsize()
+    copy = multiprocessing.Process(name='copy', target=getproc)
+    prog = multiprocessing.Process(name='prog', target=dl_progress)
+    copy.start()
+    prog.start()
+
+
+
+def getdir(arg1,arg2=None):
     try:
-        print "Downloading zip of " + arg1 + " to " + arg2
+        print "Downloading zip of " + arg1
         connect()
-        session.get_directory_as_zip(arg2,arg1)
+        session.get_directory_as_zip(arg1,arg2)
         print "Download Complete"
 
     except:
@@ -118,19 +181,32 @@ def rm(arg1):
     try:
         print "WARNING: This command deletes files recursively."
         confirm = ""
-        while (confirm != "Y") or (conf != "N"):
-            username_input = raw_input('Are you sure you want to delete ' + arg1 + '? [Y/N]')
-        if confirm == "Y":
-            result = session.mkdir(arg1)
+        while confirm != "Y" and confirm != "N" and confirm != "y" and confirm != "n":
+            confirm = raw_input('Are you sure you want to delete ' + arg1 + '? [Y/N]')
+            print confirm
+        if confirm == "Y" or confirm == "y":
+            result = session.delete(arg1)
             print "Deleted " + arg1   
-        elif confirm == "N":
+        elif confirm == "N" or confirm == "n":
             print "Operation Canceled"
+            sys.exit(0)
     except: 
-        print "Error: could not create dir"
+        print "Error: could not delete"
 
+def share(arg1):
+    #try:
+    print "Creating public share"
+    connect()
+    share = session.share_file_with_link(arg1)
+    print "\n=== Created Share Successfully ==="+ bcolors.YELLOW + "\n\nLink: " + share.get_link() + "\nShare Contents: " + share.get_path() + "\n" + bcolors.DEFAULT
+
+    #except:
+        #print "Error: could not create file share"
 ##### END COMMAND DEFINITIONS #####
 
 def main():
+    global dl_lpath
+    global dl_rpath
     if len(sys.argv) == 1:
         print "No arguments provided."
         sys.exit(1)
@@ -139,45 +215,69 @@ def main():
             if len(sys.argv) == 2:
                 ls('/')
             else: 
-                ls(sys.argv[2])
+                if len(sys.argv) == 3:
+                    if sys.argv[2] == "-l":
+                        ls('/',True)
+                    else:
+                        ls(sys.argv[2])
+                else:
+                    if sys.argv[2] == "-l":
+                        ls(sys.argv[3],True)
+                    else:
+                        ls(sys.argv[2])
+
         elif sys.argv[1] == "mkdir":
             if len(sys.argv) == 2:
-                print "Syntax: mkdir <name>"
+                print "Creates a new directory\nSyntax: mkdir <name>"
             else: 
                 mkdir(sys.argv[2])
+
         elif sys.argv[1] == "rm":
             if len(sys.argv) == 2:
-                print "Syntax: rm <name>"
+                print "Recursively deletes a file or directory\nSyntax: rm <name>"
             else: 
-                mkdir(sys.argv[2])
+                rm(sys.argv[2])
+
         elif sys.argv[1] == "put":
             if len(sys.argv) == 2:
-                print "Syntax: put [source] <dest>"
+                print "Uploads a file\nSyntax: put [local source] <remote dest>"
             elif len(sys.argv) == 3:
-                put('/',sys.argv[2])
-            elif len[sys.argv] == 4:
+                put(sys.argv[2])
+            elif len(sys.argv) == 4:
                 put(sys.argv[2],sys.argv[3])
+
         elif sys.argv[1] == "putdir":
             if len(sys.argv) == 2:
-                print "Syntax: putdir [source] <dest>"
+                print "Uploads a directory\nSyntax: putdir [local source] <remote dest>"
             elif len(sys.argv) == 3:
-                putdir('/',sys.argv[2])
-            elif len[sys.argv] == 4:
+                putdir(sys.argv[2])
+            elif len(sys.argv) == 4:
                 putdir(sys.argv[2],sys.argv[3])
+
         elif sys.argv[1] == "get":
             if len(sys.argv) == 2:
-                print "Syntax: get [source] <dest>"
+                print "Downloads a file\nSyntax: get [remote source] <local dest>"
             elif len(sys.argv) == 3:
-                get(sys.argv[2],cwd)
-            elif len[sys.argv] == 4:
-                get(sys.argv[2],sys.argv[3])
+                dl_lpath = "./" + sys.argv[2].rsplit('/', 1)[-1]
+                dl_rpath = sys.argv[2]
+                get(sys.argv[2])
+            elif len(sys.argv) == 4:
+                dl_lpath = sys.argv[3] + '/' + sys.argv[2].rsplit('/', 1)[-1]
+                dl_rpath = sys.argv[2]
+                get(sys.argv[2],sys.argv[3] + '/' + sys.argv[2].rsplit('/', 1)[-1])
         elif sys.argv[1] == "getdir":
             if len(sys.argv) == 2:
-                print "Syntax: getdir [source] <dest>"
+                print "Downloads directory as zip archive\nSyntax: getdir [remote source] <local dest>"
             elif len(sys.argv) == 3:
-                getdir(sys.argv[2],cwd)
-            elif len[sys.argv] == 4:
+                getdir(sys.argv[2],sys.argv[2].rsplit('/', 1)[-1] + '.zip')
+            elif len(sys.argv) == 4:
                 getdir(sys.argv[2],sys.argv[3])
+
+        elif sys.argv[1] == "share":
+            share(sys.argv[2])
+
+        else:
+            print "Invalid Command, please revise."
     else:
         print "Invalid Syntax, please revise."
 
