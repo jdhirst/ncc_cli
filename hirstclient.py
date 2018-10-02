@@ -65,24 +65,20 @@ def dl_getsize():
     fobj = session.file_info(dl_lpath)
     dl_rsize = fobj.get_size()
 
-def dl_progress(close=False):
-    pbar = tqdm(total=100)
+def dl_progress():
+    pbar = tqdm(total=dl_rsize, unit_scale=True, unit="byte")
     dl_lsize = 1
     while dl_lsize < dl_rsize:
         if os.path.exists(dl_lpath):
-            time.sleep(1.0)
-            oldpercent = float(dl_lsize) / float(dl_rsize) * 100
+            time.sleep(0.1)
+            oldsize = dl_lsize
             dl_lsize = os.path.getsize(dl_lpath)
         else:
-            oldpercent = 0
+            oldsize = 0
             time.sleep(1.0)
-        percent = float(dl_lsize) / float(dl_rsize) * 100
-        change = float(percent) - float(oldpercent)
-        #print str(round(change, 2)) + " percentage increase"
-        #print str(round(percent, 2)) + "% Complete"
-        pbar.update(round(change,2))
+        changesize = float(dl_lsize) - float(oldsize)
+        pbar.update(changesize)
     pbar.close()
-
 
 ##### DEFINE USER COMMANDS BELOW #####
 
@@ -131,14 +127,14 @@ def putdir(arg1,arg2='/'):
     # TODO: progress indication
 
 def getproc():
-    #try:
-    print "Downloading " + getarg1
-    session.get_file(getarg1,getarg2)
-    time.sleep(1.0)
-    print "Download Complete"
-    #except:
-    #    print "Error: could not download file"
-    # TODO: progress indication
+    try:
+        print "Downloading " + getarg1
+        session.get_file(getarg1,getarg2)
+        time.sleep(1.0)
+        print "Download Complete"
+    except:
+        print "Error: could not download file"
+
 
 def get(arg1,arg2=None):
     global getarg1
