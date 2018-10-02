@@ -9,8 +9,8 @@ import base64
 import time
 import humanize
 import multiprocessing
-import tqdm
 import owncloud as nclib
+from tqdm import tqdm
 from texttable import Texttable
 from os.path import expanduser
 
@@ -66,20 +66,22 @@ def dl_getsize():
     dl_rsize = fobj.get_size()
 
 def dl_progress(close=False):
+    pbar = tqdm(total=100)
     dl_lsize = 1
-    #pbar = tqdm(total=100)
     while dl_lsize < dl_rsize:
         if os.path.exists(dl_lpath):
             time.sleep(1.0)
+            oldpercent = float(dl_lsize) / float(dl_rsize) * 100
             dl_lsize = os.path.getsize(dl_lpath)
         else:
+            oldpercent = 0
             time.sleep(1.0)
-        percent = dl_rsize / dl_lsize * 100
-        print dl_rsize
-        print dl_lsize
-        print percent
-        #pbar.update(10)
-    #pbar.close()
+        percent = float(dl_lsize) / float(dl_rsize) * 100
+        change = float(percent) - float(oldpercent)
+        #print str(round(change, 2)) + " percentage increase"
+        #print str(round(percent, 2)) + "% Complete"
+        pbar.update(round(change,2))
+    pbar.close()
 
 
 ##### DEFINE USER COMMANDS BELOW #####
@@ -132,6 +134,7 @@ def getproc():
     #try:
     print "Downloading " + getarg1
     session.get_file(getarg1,getarg2)
+    time.sleep(1.0)
     print "Download Complete"
     #except:
     #    print "Error: could not download file"
@@ -148,8 +151,6 @@ def get(arg1,arg2=None):
     prog = multiprocessing.Process(name='prog', target=dl_progress)
     copy.start()
     prog.start()
-
-
 
 def getdir(arg1,arg2=None):
     try:
