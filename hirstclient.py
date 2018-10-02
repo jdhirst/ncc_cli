@@ -10,6 +10,8 @@ import time
 import humanize
 import multiprocessing
 import owncloud as nclib
+from yaspin import yaspin
+from yaspin.spinners import Spinners
 from tqdm import tqdm
 from texttable import Texttable
 from os.path import expanduser
@@ -80,6 +82,28 @@ def dl_progress():
         pbar.update(changesize)
     pbar.close()
 
+def zip_dl_progress():
+    if os.path.exists(dl_lpath):
+        print dl_lpath + " already exists"
+    else:
+        print "Downloading zip of " + getdirarg1
+        dl_lsize = 1
+        getdir_copy = multiprocessing.Process(name='getdir_copy', target=getdirproc)
+        getdir_copy.start()
+        pbar = tqdm(total=0, unit_scale=True, unit="byte")
+        while getdir_copy.is_alive() == True:
+            if os.path.exists(dl_lpath):
+                time.sleep(0.1)
+                oldsize = dl_lsize
+                dl_lsize = os.path.getsize(dl_lpath)
+            else:
+                oldsize = 0
+                time.sleep(1.0)
+            changesize = float(dl_lsize) - float(oldsize)
+            pbar.update(changesize)
+        pbar.close()
+        print "Download Complete"
+
 ##### DEFINE USER COMMANDS BELOW #####
 
 def ls(arg1,arg2=False):
@@ -102,6 +126,19 @@ def ls(arg1,arg2=False):
         print t.draw()
     except:
         print "Error: could not list dir"
+
+def lsshare(arg1):
+    try:
+        connect()
+        output = session.get_shares(path=arg1,subfiles=True)
+        t = Texttable()
+        t.header(["Path","Token","Date Created"])
+        for i in output:
+            t.add_row([i.get_path(),i.get_token(),i.get_share_time()])
+        t.set_deco(t.VLINES | t.HEADER)
+        print t.draw()
+    except:
+        print "Error: could not list shares"
 
 def put(arg1,arg2='/'):
     try:
@@ -135,7 +172,6 @@ def getproc():
     except:
         print "Error: could not download file"
 
-
 def get(arg1,arg2=None):
     global getarg1
     global getarg2
@@ -148,36 +184,62 @@ def get(arg1,arg2=None):
     copy.start()
     prog.start()
 
-def getdir(arg1,arg2=None):
+def getdirproc():
     try:
-        print "Downloading zip of " + arg1
-        connect()
-        session.get_directory_as_zip(arg1,arg2)
-        print "Download Complete"
-
+        session.get_directory_as_zip(getdirarg1,getdirarg2)
     except:
         print "Error: could not download zip file"
 
-    # TODO: progress indication
+def getdir(arg1,arg2=None):
+    global getdirarg1
+    global getdirarg2
+    getdirarg1 = arg1
+    getdirarg2 = arg2
+    connect()
+    getdir_prog = multiprocessing.Process(name='prog', target=zip_dl_progress)
+    getdir_prog.start()
 
 def mkdir(arg1):
-    connect()
     try:
-        result = session.mkdir(arg1)
+        with yaspin(Spinners.bouncingBall, attrs=["bold"],) as sp:
+            sp.text = "Operation in Progress"
+            connect()
+            session.mkdir(arg1)
+            time.sleep(1.0)
         print "Created " + arg1
     except: 
         print "Error: could not create dir"
 
+def copy(arg1,arg2):
+    print "Copying " + arg1 + " to " + arg2
+    with yaspin(Spinners.bouncingBall, attrs=["bold"],) as sp:
+        sp.text = "Operation in Progress"
+        connect()
+        session.copy(arg1,arg2)
+        time.sleep(1.0)
+    print "Operation Completed"
+
+def move(arg1,arg2):
+    print "Moving " + arg1 + " to " + arg2
+    with yaspin(Spinners.bouncingBall, attrs=["bold"],) as sp:
+        sp.text = "Operation in Progress"
+        connect()
+        session.move(arg1,arg2)
+        time.sleep(1.0)
+    print "Operation Completed"
+
 def rm(arg1):
-    connect()
     try:
         print "WARNING: This command deletes files recursively."
         confirm = ""
         while confirm != "Y" and confirm != "N" and confirm != "y" and confirm != "n":
             confirm = raw_input('Are you sure you want to delete ' + arg1 + '? [Y/N]')
-            print confirm
         if confirm == "Y" or confirm == "y":
-            result = session.delete(arg1)
+            with yaspin(Spinners.bouncingBall, attrs=["bold"],) as sp:
+                sp.text = "Operation in Progress"
+                connect()
+                session.delete(arg1)
+                time.sleep(1.0)
             print "Deleted " + arg1   
         elif confirm == "N" or confirm == "n":
             print "Operation Canceled"
@@ -185,15 +247,46 @@ def rm(arg1):
     except: 
         print "Error: could not delete"
 
-def share(arg1):
-    #try:
-    print "Creating public share"
-    connect()
-    share = session.share_file_with_link(arg1)
-    print "\n=== Created Share Successfully ==="+ bcolors.YELLOW + "\n\nLink: " + share.get_link() + "\nShare Contents: " + share.get_path() + "\n" + bcolors.DEFAULT
+def mkshare(arg1):
+    try:
+        print "Creating public share"
+        with yaspin(Spinners.bouncingBall, attrs=["bold"],) as sp:
+            sp.text = "Operation in Progress"
+            connect()
+            share = session.share_file_with_link(arg1)
+            time.sleep(1.0)
+        print "\n=== Created Share Successfully ==="+ bcolors.YELLOW + "\n\nLink: " + share.get_link() + "\nShare Contents: " + share.get_path() + "\n" + bcolors.DEFAULT
 
-    #except:
-        #print "Error: could not create file share"
+    except:
+        print "Error: could not create file share"
+
+def rmshare(arg1):
+    try:
+        print "Loading Share: " + arg1
+        confirm = ""
+        with yaspin(Spinners.bouncingBall, attrs=["bold"],) as sp:
+            sp.text = "Operation in Progress"
+            connect()
+            output = session.get_shares(arg1)
+            sharepath = ""
+            for i in output:
+                sharepath = i.get_path()
+        if sharepath == "":
+            print "Share not found"
+        else:
+            while confirm != "Y" and confirm != "N" and confirm != "y" and confirm != "n":
+                confirm = raw_input('Are you sure you want to delete share ' + sharepath + '? [Y/N]')
+            if confirm == "Y" or confirm == "y":
+                print "Deleting public share"
+                with yaspin(Spinners.bouncingBall, attrs=["bold"],) as sp:
+                    for i in output:
+                        sp.text = "Operation in Progress"
+                        session.delete_share(i.get_id())
+                        time.sleep(1.0)
+            print "\nOperation Completed"
+
+    except:
+        print "Error: could not delete file share"
 ##### END COMMAND DEFINITIONS #####
 
 def main():
@@ -206,7 +299,7 @@ def main():
         if sys.argv[1] == "ls":
             if len(sys.argv) == 2:
                 ls('/')
-            else: 
+            else:
                 if len(sys.argv) == 3:
                     if sys.argv[2] == "-l":
                         ls('/',True)
@@ -217,6 +310,14 @@ def main():
                         ls(sys.argv[3],True)
                     else:
                         ls(sys.argv[2])
+        elif sys.argv[1] == "lsshare":
+            if len(sys.argv) == 2:
+                lsshare('/')
+            else: 
+                if len(sys.argv) == 3:
+                    lsshare(sys.argv[2])
+                else:
+                    lsshare(sys.argv[2])
 
         elif sys.argv[1] == "mkdir":
             if len(sys.argv) == 2:
@@ -261,17 +362,41 @@ def main():
             if len(sys.argv) == 2:
                 print "Downloads directory as zip archive\nSyntax: getdir [remote source] <local dest>"
             elif len(sys.argv) == 3:
+                dl_lpath = "./" + sys.argv[2].rsplit('/', 1)[-1] + '.zip'
+                dl_rpath = sys.argv[2]
                 getdir(sys.argv[2],sys.argv[2].rsplit('/', 1)[-1] + '.zip')
             elif len(sys.argv) == 4:
+                dl_lpath = sys.argv[3]
+                dl_rpath = sys.argv[2]
                 getdir(sys.argv[2],sys.argv[3])
-
-        elif sys.argv[1] == "share":
-            share(sys.argv[2])
-
+        elif sys.argv[1] == "cp":
+            if (len(sys.argv) == 2) or (len(sys.argv) == 3):
+                print "Copies file within cloud\nSyntax: cp [source file] [destination dir]"
+            elif len(sys.argv) == 4:
+                copy(sys.argv[2],sys.argv[3] + '/' + sys.argv[2].rsplit('/', 1)[-1])
+        elif sys.argv[1] == "mv":
+            if (len(sys.argv) == 2) or (len(sys.argv) == 3):
+                print "Moves file within cloud\nSyntax: mv [source file] [destination dir]"
+            elif len(sys.argv) == 4:
+                move(sys.argv[2],sys.argv[3] + '/' + sys.argv[2].rsplit('/', 1)[-1])
+        elif sys.argv[1] == "mkshare":
+            if len(sys.argv) == 2:
+                print "Creates new share with link from supplied file/directory\nSyntax: mkshare [remote file/dirname]"
+            else: 
+                mkshare(sys.argv[2])
+        elif sys.argv[1] == "rmshare":
+            if len(sys.argv) == 2:
+                print "Deletes file share from supplied file/directory\nSyntax: rmshare [remote file/dirname]"
+            else: 
+                rmshare(sys.argv[2])
         else:
             print "Invalid Command, please revise."
     else:
         print "Invalid Syntax, please revise."
 
 if __name__ == '__main__':
-    main()
+    try: 
+        main()
+    except KeyboardInterrupt:
+        print "Operation Interrupted"
+        sys.exit()
