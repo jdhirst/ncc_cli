@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 import sys
 import os
 import subprocess
@@ -110,27 +110,27 @@ def zip_dl_progress():
 ##### DEFINE USER COMMANDS BELOW #####
 
 def ls(arg1,arg2=False):
-    debug = True
-    if debug == True:
-    #try:
-        connect()
-        output = session.list(arg1)
-        t = Texttable()
-        for i in output:
-            if arg2 == True:
-                if i.is_dir() == True:
-                    t.add_row(["d",i.get_name(),"",i.get_content_type(),i.get_last_modified()])
-                if i.is_dir() == False:
-                    t.add_row(["",i.get_name(),humanize.naturalsize(i.get_size()),i.get_content_type(),i.get_last_modified()])
-            elif arg2 == False:
-                if i.is_dir() == True:
-                    t.add_row(["d",bcolors.BLUE + i.get_name() + bcolors.DEFAULT,""])
-                if i.is_dir() == False:
-                    t.add_row(["",bcolors.DEFAULT + i.get_name() + bcolors.DEFAULT,humanize.naturalsize(i.get_size())])
-        t.set_deco(t.VLINES)
+    try:
+        with yaspin(Spinners.bouncingBall, attrs=["bold"],) as sp:
+            sp.text = "Operation in Progress"          
+            connect()
+            output = session.list(arg1)
+            t = Texttable()
+            for i in output:
+                if arg2 == True:
+                    if i.is_dir() == True:
+                        t.add_row(["d",i.get_name(),"",i.get_content_type(),i.get_last_modified()])
+                    if i.is_dir() == False:
+                        t.add_row(["",i.get_name(),humanize.naturalsize(i.get_size()),i.get_content_type(),i.get_last_modified()])
+                elif arg2 == False:
+                    if i.is_dir() == True:
+                        t.add_row(["d",bcolors.BLUE + i.get_name() + bcolors.DEFAULT,""])
+                    if i.is_dir() == False:
+                        t.add_row(["",bcolors.DEFAULT + i.get_name() + bcolors.DEFAULT,humanize.naturalsize(i.get_size())])
+            t.set_deco(t.VLINES)
         print t.draw()
-    #except:
-    #    print "Error: could not list dir"
+    except:
+        print "Error: could not list dir"
 
 def lsshare(arg1):
     try:
