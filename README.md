@@ -31,9 +31,13 @@ Libraries
 This utility uses the pyocclient library and a couple of other libraries for visual indications, human readable numbers, progress bars etc. Much thanks to all of the developers of their respective libraries.
 
 > pyocclient - https://github.com/owncloud/pyocclient
+
 > humanize - https://github.com/jmoiron/humanize
+
 > tqdm - https://github.com/tqdm/tqdm
+
 > yaspin - https://github.com/pavdmyt/yaspin
+
 > texttable - https://github.com/foutaise/texttable
 
 License
