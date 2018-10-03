@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="ncc_cli",
-    version="0.0.1",
+    version="0.0.2",
     author="James Hirst",
     author_email="jdhirst@hirstgroup.net",
     description="A small command-line client for NextCloud/ownCloud",
@@ -15,7 +15,12 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 2.7",
-        "License :: OSI Approved :: GPL-3",
+        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Operating System :: OS Independent",
     ],
+    entry_points={
+        'console_scripts': [
+            'ncc = ncc_cli.ncc_cli:main',
+        ]
+    }
 )
