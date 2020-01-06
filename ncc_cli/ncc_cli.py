@@ -67,7 +67,7 @@ def connect():
 def dl_getsize():
     global dl_rsize
     global dl_lsize
-    fobj = session.file_info(dl_lpath)
+    fobj = session.file_info(dl_rpath)
     dl_rsize = fobj.get_size()
 
 def dl_progress():
