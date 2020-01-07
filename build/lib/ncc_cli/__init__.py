@@ -1,2 +1,1 @@
-name = "ncc_cli"
-from .ncc_cli import *
+../../../ncc_cli/__init__.py
