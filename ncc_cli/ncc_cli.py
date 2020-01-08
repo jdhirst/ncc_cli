@@ -46,15 +46,16 @@ def connect():
     global session
     if not os.path.isfile(configfile):
         print (bcolors.YELLOW + "--- Initial Client Setup ---\n\nNOTE: Please enter full URI for server name.\nExample: https://myserver.com/nextcloud\nFor security reasons, please do not use your plaintext password for this utility. You should generate an App password from your NextCloud settings page.\n" + bcolors.DEFAULT)
-        servername_input = raw_input('Server URI: ')
-        username_input = raw_input('Username: ')
+        servername_input = input('Server URI: ')
+        username_input = input('Username: ')
         password_raw = getpass.getpass()
-        password_encoded = base64.encodestring(password_raw)
+        password_bytes = password_raw.encode("utf-8")
+        password_encoded = base64.b64encode(password_raw.encode("utf-8"))
         cfgfile = open(configfile,'w')
         Config.add_section('Config')
         Config.set('Config','servername',servername_input)
         Config.set('Config','username',username_input)
-        Config.set('Config','password_base64',password_encoded)
+        Config.set('Config','password_base64',password_encoded.decode("utf-8"))
         Config.write(cfgfile)
         cfgfile.close()
     cfguser = ConfigSectionMap("Config")['username']
@@ -243,7 +244,7 @@ def rm(arg1):
         print ("WARNING: This command deletes files recursively.")
         confirm = ""
         while confirm != "Y" and confirm != "N" and confirm != "y" and confirm != "n":
-            confirm = raw_input('Are you sure you want to delete ' + arg1 + '? [Y/N]')
+            confirm = input('Are you sure you want to delete ' + arg1 + '? [Y/N]')
         if confirm == "Y" or confirm == "y":
             with yaspin(Spinners.bouncingBall, attrs=["bold"],) as sp:
                 sp.text = "Operation in Progress"
@@ -285,7 +286,7 @@ def rmshare(arg1):
             print ("Share not found")
         else:
             while confirm != "Y" and confirm != "N" and confirm != "y" and confirm != "n":
-                confirm = raw_input('Are you sure you want to delete share ' + sharepath + '? [Y/N]')
+                confirm = input('Are you sure you want to delete share ' + sharepath + '? [Y/N]')
             if confirm == "Y" or confirm == "y":
                 print ("Deleting public share")
                 with yaspin(Spinners.bouncingBall, attrs=["bold"],) as sp:
