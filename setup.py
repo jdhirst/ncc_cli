@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="ncc_cli",
-    version="0.0.3",
+    version="0.0.4",
     author="James Hirst",
     author_email="jdhirst@hirstgroup.net",
     description="A small command-line client for NextCloud/ownCloud",
