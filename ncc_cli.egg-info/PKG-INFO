@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: ncc-cli
-Version: 0.0.2
+Version: 0.0.3
 Summary: A small command-line client for NextCloud/ownCloud
 Home-page: https://github.com/jdhirst1/ncc_cli
 Author: James Hirst
@@ -70,7 +70,7 @@ Description: # ncc_cli
         https://www.gnu.org/licenses/gpl-3.0.en.html
         
 Platform: UNKNOWN
-Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: Python :: 3.8
 Classifier: License :: OSI Approved :: GNU General Public License v3 (GPLv3)
 Classifier: Operating System :: OS Independent
 Description-Content-Type: text/markdown
