@@ -16,7 +16,7 @@ setuptools.setup(
     install_requires=[
         'pyocclient',
         'humanize',
-        'tqdn',
+        'tqdm',
         'yaspin',
         'texttable',
     ],
