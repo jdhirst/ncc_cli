@@ -1,5 +1,5 @@
 humanize
 pyocclient
 texttable
-tqdn
+tqdm
 yaspin
