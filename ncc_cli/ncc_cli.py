@@ -37,8 +37,8 @@ def ConfigSectionMap(section):
             dict1[option] = Config.get(section, option)
             if dict1[option] == -1:
                 DebugPrint("skip: %s" % option)
-        except:
-            print("exception on %s!" % option)
+        except Exception as e:
+            print("exception on %s!" % option + "\n" + e)
             dict1[option] = None
     return dict1
 
@@ -62,8 +62,11 @@ def connect():
     cfgpass_encoded = ConfigSectionMap("Config")['password_base64']
     servername = ConfigSectionMap("Config")['servername']
     cfgpass = base64.b64decode(cfgpass_encoded)
-    session = nclib.Client(servername)
-    session.login(cfguser,cfgpass)
+    try:
+        session = nclib.Client(servername)
+        session.login(cfguser,cfgpass)
+    except Exception as e:
+        print("Failed to connect:\n" + e)
 
 def dl_getsize():
     global dl_rsize
@@ -90,30 +93,33 @@ def zip_dl_progress():
     if os.path.exists(dl_lpath):
         print(dl_lpath + " already exists")
     else:
-        print("Downloading zip of " + getdirarg1)
-        dl_lsize = 1
-        getdir_copy = multiprocessing.Process(name='getdir_copy', target=getdirproc)
-        getdir_copy.start()
-        pbar = tqdm(total=0, unit_scale=True, unit="byte")
-        while getdir_copy.is_alive() == True:
-            if os.path.exists(dl_lpath):
-                time.sleep(0.1)
-                oldsize = dl_lsize
-                dl_lsize = os.path.getsize(dl_lpath)
-            else:
-                oldsize = 0
-                time.sleep(1.0)
-            changesize = float(dl_lsize) - float(oldsize)
-            pbar.update(changesize)
-        pbar.close()
-        print("Download Complete")
+        try:
+            print("Downloading zip of " + getdirarg1)
+            dl_lsize = 1
+            getdir_copy = multiprocessing.Process(name='getdir_copy', target=getdirproc)
+            getdir_copy.start()
+            pbar = tqdm(total=0, unit_scale=True, unit="byte")
+            while getdir_copy.is_alive() == True:
+                if os.path.exists(dl_lpath):
+                    time.sleep(0.1)
+                    oldsize = dl_lsize
+                    dl_lsize = os.path.getsize(dl_lpath)
+                else:
+                    oldsize = 0
+                    time.sleep(1.0)
+                changesize = float(dl_lsize) - float(oldsize)
+                pbar.update(changesize)
+            pbar.close()
+            print("Download Complete")
+        except Exception as e:
+            print("Failed to download zip:\n" + e)
 
 ##### DEFINE USER COMMANDS BELOW #####
 
 def ls(arg1,arg2=False):
     debug = True
     if debug == True:
-    #try:
+    try:
         connect()
         output = session.list(arg1)
         t = Texttable()
@@ -130,8 +136,8 @@ def ls(arg1,arg2=False):
                     t.add_row(["",bcolors.DEFAULT + i.get_name() + bcolors.DEFAULT,humanize.naturalsize(i.get_size())])
         t.set_deco(t.VLINES)
         print(t.draw())
-    #except:
-    #    print "Error: could not list dir"
+    except Exception as e:
+        print("Error: could not list dir:\n" + e)
 
 def lsshare(arg1):
     try:
@@ -143,8 +149,8 @@ def lsshare(arg1):
             t.add_row([i.get_path(),i.get_token(),i.get_share_time()])
         t.set_deco(t.VLINES | t.HEADER)
         print(t.draw())
-    except:
-        print("Error: could not list shares")
+    except Exception as e:
+        print("Error: could not list shares:\n" + e)
 
 def put(arg1,arg2='/'):
     try:
@@ -156,8 +162,8 @@ def put(arg1,arg2='/'):
             time.sleep(1.0)
         print("Upload Complete")
 
-    except:
-        print("Error: could not upload file")
+    except Exception as e:
+        print("Error: could not upload file:\n" + e)
     # TODO: Better progress indication. Need library update for this.
 
 def putdir(arg1,arg2='/'):
@@ -170,8 +176,8 @@ def putdir(arg1,arg2='/'):
             time.sleep(1.0)
         print("Upload Complete")
 
-    except:
-        print("Error: could not upload directory")
+    except Exception as e:
+        print("Error: could not upload directory:\n" + e)
     # TODO: Better progress indication. Need library update for this.
 
 def getproc():
@@ -180,35 +186,41 @@ def getproc():
         session.get_file(getarg1,getarg2)
         time.sleep(1.0)
         print("Download Complete")
-    except:
-        print("Error: could not download file")
+    except Exception as e:
+        print("Error: could not download file:\n" + e)
 
 def get(arg1,arg2=None):
-    global getarg1
-    global getarg2
-    getarg1 = arg1
-    getarg2 = arg2
-    connect()
-    dl_getsize()
-    copy = multiprocessing.Process(name='copy', target=getproc)
-    prog = multiprocessing.Process(name='prog', target=dl_progress)
-    copy.start()
-    prog.start()
+    try:
+        global getarg1
+        global getarg2
+        getarg1 = arg1
+        getarg2 = arg2
+        connect()
+        dl_getsize()
+        copy = multiprocessing.Process(name='copy', target=getproc)
+        prog = multiprocessing.Process(name='prog', target=dl_progress)
+        copy.start()
+        prog.start()
+    except Exception as e:
+        print("Failed to get file:\n" + e)
 
 def getdirproc():
     try:
         session.get_directory_as_zip(getdirarg1,getdirarg2)
-    except:
-        print("Error: could not download zip file")
+    except Exception as e:
+        print("Error: could not download zip file:" + e)
 
 def getdir(arg1,arg2=None):
-    global getdirarg1
-    global getdirarg2
-    getdirarg1 = arg1
-    getdirarg2 = arg2
-    connect()
-    getdir_prog = multiprocessing.Process(name='prog', target=zip_dl_progress)
-    getdir_prog.start()
+    try:
+        global getdirarg1
+        global getdirarg2
+        getdirarg1 = arg1
+        getdirarg2 = arg2
+        connect()
+        getdir_prog = multiprocessing.Process(name='prog', target=zip_dl_progress)
+        getdir_prog.start()
+    except Exception as e:
+        print("Failed to get directory:\n" + e)
 
 def mkdir(arg1):
     try:
@@ -218,26 +230,32 @@ def mkdir(arg1):
             session.mkdir(arg1)
             time.sleep(1.0)
         print("Created " + arg1)
-    except: 
-        print("Error: could not create dir")
+    except Exception as e: 
+        print("Error: could not create dir:\n" + e)
 
 def copy(arg1,arg2):
-    print ("Copying " + arg1 + " to " + arg2)
-    with yaspin(Spinners.bouncingBall, attrs=["bold"],) as sp:
-        sp.text = "Operation in Progress"
-        connect()
-        session.copy(arg1,arg2)
-        time.sleep(1.0)
-    print("Operation Completed")
+    try:
+        print ("Copying " + arg1 + " to " + arg2)
+        with yaspin(Spinners.bouncingBall, attrs=["bold"],) as sp:
+            sp.text = "Operation in Progress"
+            connect()
+            session.copy(arg1,arg2)
+            time.sleep(1.0)
+        print("Operation Completed")
+    except Exception as e:
+        print("Failed to copy:\n" + e)
 
 def move(arg1,arg2):
-    print("Moving " + arg1 + " to " + arg2)
-    with yaspin(Spinners.bouncingBall, attrs=["bold"],) as sp:
-        sp.text = "Operation in Progress"
-        connect()
-        session.move(arg1,arg2)
-        time.sleep(1.0)
-    print("Operation Completed")
+    try:
+        print("Moving " + arg1 + " to " + arg2)
+        with yaspin(Spinners.bouncingBall, attrs=["bold"],) as sp:
+            sp.text = "Operation in Progress"
+            connect()
+            session.move(arg1,arg2)
+            time.sleep(1.0)
+        print("Operation Completed")
+    except Exception as e:
+        print("Failed to move file:\n" + e)
 
 def rm(arg1):
     try:
@@ -255,8 +273,8 @@ def rm(arg1):
         elif confirm == "N" or confirm == "n":
             print("Operation Canceled")
             sys.exit(0)
-    except: 
-        print("Error: could not delete")
+    except Exception as e: 
+        print("Error: could not delete:\n" + e)
 
 def mkshare(arg1):
     try:
@@ -268,8 +286,8 @@ def mkshare(arg1):
             time.sleep(1.0)
         print("\n=== Created Share Successfully ==="+ bcolors.YELLOW + "\n\nLink: " + share.get_link() + "\nShare Contents: " + share.get_path() + "\n" + bcolors.DEFAULT)
 
-    except:
-        print("Error: could not create file share")
+    except Exception as e:
+        print("Error: could not create file share:\n" + e)
 
 def rmshare(arg1):
     try:
@@ -296,8 +314,8 @@ def rmshare(arg1):
                         time.sleep(1.0)
             print("\nOperation Completed")
 
-    except:
-        print("Error: could not delete file share")
+    except Exception as e:
+        print("Error: could not delete file share:\n" + e)
 ##### END COMMAND DEFINITIONS #####
 
 def main():
