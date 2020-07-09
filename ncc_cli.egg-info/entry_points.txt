@@ -1,3 +1,0 @@
-[console_scripts]
-ncc = ncc_cli.ncc_cli:main
-
