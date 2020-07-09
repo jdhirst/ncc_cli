@@ -24,7 +24,10 @@ Now you have all of the dependancies installed, you can simply clone the ncc_cli
 
 Usage
 =====
+
 ###### Syntax: ncc [command] <arguments>
+  
+```
 ls (-l) <dir> - lists dir contents
 put - [local file] <dest remote dir> - uploads file
 putdir - [local dir] <dest remote dir> - uploads dir
@@ -37,6 +40,7 @@ lsshare - [dir name] - lists shares in dir
 rmshare - [dir/file name] - deletes share
 cp - [source] [destination] - copies files on server
 mv - [source] [destination] - moves files on server
+```
 
 To Do
 =====
