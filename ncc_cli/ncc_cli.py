@@ -1,29 +1,22 @@
 #!/usr/bin/python
-import sys
-import os
-import subprocess
-import getpass
-import configparser
-import base64
-import time
-import humanize
-import multiprocessing
+import sys,os,subprocess,getpass,configparser,base64,time,humanize,multiprocessing,argparse
 import owncloud as nclib
 from yaspin import yaspin
 from yaspin.spinners import Spinners
 from tqdm import tqdm
 from texttable import Texttable
-from os.path import expanduser
 
-class bcolors:
+version = "0.0.7" #Define current version
+
+class bcolours: #Define some pretty colours to be used later
     BLUE = '\033[34m'
     DEFAULT = '\033[39m'
     YELLOW = '\033[93m'
 
-home = expanduser("~")
-if os.name == 'nt':
+home = os.path.expanduser("~")
+if os.name == 'nt': #If on Windows, use ini extension
     configfile = home + "/ncc_cfg.ini"
-else:
+else: #Elsewhere, use UNIX hidden filename
     configfile = home + "/.ncc_cfg"
 Config = configparser.ConfigParser()
 Config.read(configfile)
@@ -45,11 +38,11 @@ def ConfigSectionMap(section):
 def connect():
     global session
     if not os.path.isfile(configfile):
-        print(bcolors.YELLOW + "--- Initial Client Setup ---\n\nNOTE: Please enter full URI for server name.\nExample: https://myserver.com/nextcloud\nFor security reasons, please do not use your plaintext password for this utility. You should generate an App password from your NextCloud settings page.\n" + bcolors.DEFAULT)
+        print(bcolours.YELLOW + "--- Initial Client Setup ---\n\nNOTE: Please enter full URI for server name.\nExample: https://myserver.com/nextcloud\nFor security reasons, please do not use your plaintext password for this utility. You should generate an App password from your NextCloud settings page.\n" + bcolours.DEFAULT)
         servername_input = input('Server URI: ')
         username_input = input('Username: ')
         password_raw = getpass.getpass()
-        password_bytes = password_raw.encode("utf-8")
+        password_bytes = password_raw.encode("utf-8") #Unused?
         password_encoded = base64.b64encode(password_raw.encode("utf-8"))
         cfgfile = open(configfile,'w')
         Config.add_section('Config')
@@ -116,24 +109,22 @@ def zip_dl_progress():
 
 ##### DEFINE USER COMMANDS BELOW #####
 
-def ls(arg1,arg2=False):
-    debug = True
-    if debug == True:
+def ls(lsDir,longOutput=False):
     try:
         connect()
-        output = session.list(arg1)
+        output = session.list(lsDir)
         t = Texttable()
         for i in output:
-            if arg2 == True:
+            if longOutput == True:
                 if i.is_dir() == True:
                     t.add_row(["d",i.get_name(),"",i.get_content_type(),i.get_last_modified()])
                 if i.is_dir() == False:
                     t.add_row(["",i.get_name(),humanize.naturalsize(i.get_size()),i.get_content_type(),i.get_last_modified()])
-            elif arg2 == False:
+            elif longOutput == False:
                 if i.is_dir() == True:
-                    t.add_row(["d",bcolors.BLUE + i.get_name() + bcolors.DEFAULT,""])
+                    t.add_row(["d",bcolours.BLUE + i.get_name() + bcolours.DEFAULT,""])
                 if i.is_dir() == False:
-                    t.add_row(["",bcolors.DEFAULT + i.get_name() + bcolors.DEFAULT,humanize.naturalsize(i.get_size())])
+                    t.add_row(["",bcolours.DEFAULT + i.get_name() + bcolours.DEFAULT,humanize.naturalsize(i.get_size())])
         t.set_deco(t.VLINES)
         print(t.draw())
     except Exception as e:
@@ -284,7 +275,7 @@ def mkshare(arg1):
             connect()
             share = session.share_file_with_link(arg1)
             time.sleep(1.0)
-        print("\n=== Created Share Successfully ==="+ bcolors.YELLOW + "\n\nLink: " + share.get_link() + "\nShare Contents: " + share.get_path() + "\n" + bcolors.DEFAULT)
+        print("\n=== Created Share Successfully ==="+ bcolours.YELLOW + "\n\nLink: " + share.get_link() + "\nShare Contents: " + share.get_path() + "\n" + bcolours.DEFAULT)
 
     except Exception as e:
         print("Error: could not create file share:\n" + e)
@@ -316,11 +307,40 @@ def rmshare(arg1):
 
     except Exception as e:
         print("Error: could not delete file share:\n" + e)
+
 ##### END COMMAND DEFINITIONS #####
 
 def main():
-    global dl_lpath
+    global dl_lpath #TODO: Find out what these are used for and get rid of them
     global dl_rpath
+
+### Usage Menu Text
+
+    title = "\n====\nncc_cli v" + version + "\n====\n"
+
+    epilog = ""
+
+### Non-Interactive Argument Parser
+
+    parser = argparse.ArgumentParser(description=title, epilog=epilog, formatter_class=argparse.RawTextHelpFormatter) #Create primary argument parser
+    subparsers = parser.add_subparsers(dest='subparser') #Create subparsers for each command (eg. ls, get, put, etc)
+
+    parser_ls = subparsers.add_parser('ls', help='list directory contents')
+    parser_ls.add_argument('lsDir', help="<directory>", default="/", nargs="?")
+    parser_ls.add_argument('-l', '--long', dest='longOutput', action='store_true')
+
+    parser_put = subparsers.add_parser('put', help='upload file')
+    parser_put.add_argument('localFile', help="<local file>")
+    parser_put.add_argument('remoteDir', help="[remote directory]", defaults="/", nargs="?")
+
+    parser_lsshare = subparsers.add_parser('lsshare', help='list shares')
+    parser_lsshare.add_argument('lsDir', help="<directory>", default="/", nargs="?")
+
+    kwargs = vars(parser.parse_args())
+    globals()[kwargs.pop('subparser')](**kwargs)
+
+def main_old():
+
     if (len(sys.argv) == 1) or (sys.argv[1] == "-h") or (sys.argv[1] == "--help"):
         t = Texttable()
         t.set_deco(t.VLINES)
