@@ -1,5 +1,5 @@
-#!/usr/bin/python
-import sys,os,subprocess,getpass,configparser,base64,time,humanize,multiprocessing,argparse
+#!/usr/bin/python3
+import sys,os,subprocess,getpass,configparser,base64,time,humanize,multiprocessing,argparse,traceback
 import owncloud as nclib
 from yaspin import yaspin
 from yaspin.spinners import Spinners
@@ -31,7 +31,7 @@ def ConfigSectionMap(section):
             if dict1[option] == -1:
                 DebugPrint("skip: %s" % option)
         except Exception as e:
-            print("exception on %s!" % option + "\n" + e)
+            print("exception on %s!" % option + "\n" + str(e))
             dict1[option] = None
     return dict1
 
@@ -59,7 +59,8 @@ def connect():
         session = nclib.Client(servername)
         session.login(cfguser,cfgpass)
     except Exception as e:
-        print("Failed to connect:\n" + e)
+        print("ERR: " + str(e) + "\n\nStack Trace:\n")
+        print(traceback.format_exc())
 
 def dl_getsize():
     global dl_rsize
@@ -105,7 +106,8 @@ def zip_dl_progress():
             pbar.close()
             print("Download Complete")
         except Exception as e:
-            print("Failed to download zip:\n" + e)
+            print("ERR: " + str(e) + "\n\nStack Trace:\n")
+            print(traceback.format_exc())
 
 ##### DEFINE USER COMMANDS BELOW #####
 
@@ -128,12 +130,13 @@ def ls(lsDir,longOutput=False):
         t.set_deco(t.VLINES)
         print(t.draw())
     except Exception as e:
-        print("Error: could not list dir:\n" + e)
+        print("ERR: " + str(e) + "\n\nStack Trace:\n")
+        print(traceback.format_exc())
 
-def lsshare(arg1):
+def lsshare(lsDir):
     try:
         connect()
-        output = session.get_shares(path=arg1,subfiles=True)
+        output = session.get_shares(path=lsDir,subfiles=True)
         t = Texttable()
         t.header(["Path","Token","Date Created"])
         for i in output:
@@ -141,7 +144,8 @@ def lsshare(arg1):
         t.set_deco(t.VLINES | t.HEADER)
         print(t.draw())
     except Exception as e:
-        print("Error: could not list shares:\n" + e)
+        print("ERR: " + str(e) + "\n\nStack Trace:\n")
+        print(traceback.format_exc())
 
 def put(arg1,arg2='/'):
     try:
@@ -150,11 +154,10 @@ def put(arg1,arg2='/'):
             sp.text = "Operation in Progress"
             connect()
             session.put_file(arg2,arg1)
-            time.sleep(1.0)
         print("Upload Complete")
 
     except Exception as e:
-        print("Error: could not upload file:\n" + e)
+        print("Error: could not upload file:\n" + str(e))
     # TODO: Better progress indication. Need library update for this.
 
 def putdir(arg1,arg2='/'):
@@ -164,21 +167,20 @@ def putdir(arg1,arg2='/'):
             sp.text = "Operation in Progress"
             connect()
             session.put_directory(arg2,arg1)
-            time.sleep(1.0)
         print("Upload Complete")
 
     except Exception as e:
-        print("Error: could not upload directory:\n" + e)
+        print("ERR: " + str(e) + "\n\nStack Trace:\n")
+        print(traceback.format_exc())
     # TODO: Better progress indication. Need library update for this.
 
 def getproc():
     try:
         print("Downloading " + getarg1)
         session.get_file(getarg1,getarg2)
-        time.sleep(1.0)
         print("Download Complete")
     except Exception as e:
-        print("Error: could not download file:\n" + e)
+        print("Error: could not download file:\n" + str(e))
 
 def get(arg1,arg2=None):
     try:
@@ -193,13 +195,15 @@ def get(arg1,arg2=None):
         copy.start()
         prog.start()
     except Exception as e:
-        print("Failed to get file:\n" + e)
+        print("ERR: " + str(e) + "\n\nStack Trace:\n")
+        print(traceback.format_exc())
 
 def getdirproc():
     try:
         session.get_directory_as_zip(getdirarg1,getdirarg2)
     except Exception as e:
-        print("Error: could not download zip file:" + e)
+        print("ERR: " + str(e) + "\n\nStack Trace:\n")
+        print(traceback.format_exc())
 
 def getdir(arg1,arg2=None):
     try:
@@ -211,18 +215,17 @@ def getdir(arg1,arg2=None):
         getdir_prog = multiprocessing.Process(name='prog', target=zip_dl_progress)
         getdir_prog.start()
     except Exception as e:
-        print("Failed to get directory:\n" + e)
+        print("ERR: " + str(e) + "\n\nStack Trace:\n")
+        print(traceback.format_exc())
 
-def mkdir(arg1):
+def mkdir(mkDir):
     try:
-        with yaspin(Spinners.bouncingBall, attrs=["bold"],) as sp:
-            sp.text = "Operation in Progress"
-            connect()
-            session.mkdir(arg1)
-            time.sleep(1.0)
-        print("Created " + arg1)
+        connect()
+        session.mkdir(mkDir)
+        print("created " + mkDir)
     except Exception as e: 
-        print("Error: could not create dir:\n" + e)
+        print("ERR: " + str(e) + "\n\nStack Trace:\n")
+        print(traceback.format_exc())
 
 def copy(arg1,arg2):
     try:
@@ -231,10 +234,10 @@ def copy(arg1,arg2):
             sp.text = "Operation in Progress"
             connect()
             session.copy(arg1,arg2)
-            time.sleep(1.0)
         print("Operation Completed")
     except Exception as e:
-        print("Failed to copy:\n" + e)
+        print("ERR: " + str(e) + "\n\nStack Trace:\n")
+        print(traceback.format_exc())
 
 def move(arg1,arg2):
     try:
@@ -243,29 +246,29 @@ def move(arg1,arg2):
             sp.text = "Operation in Progress"
             connect()
             session.move(arg1,arg2)
-            time.sleep(1.0)
         print("Operation Completed")
     except Exception as e:
-        print("Failed to move file:\n" + e)
+        print("ERR: " + str(e) + "\n\nStack Trace:\n")
+        print(traceback.format_exc())
 
-def rm(arg1):
+def rm(rmDest):
     try:
         print("WARNING: This command deletes files recursively.")
         confirm = ""
         while confirm != "Y" and confirm != "N" and confirm != "y" and confirm != "n":
-            confirm = input('Are you sure you want to delete ' + arg1 + '? [Y/N]')
+            confirm = input('Are you sure you want to delete ' + rmDest + '? [Y/N]')
         if confirm == "Y" or confirm == "y":
             with yaspin(Spinners.bouncingBall, attrs=["bold"],) as sp:
                 sp.text = "Operation in Progress"
                 connect()
-                session.delete(arg1)
-                time.sleep(1.0)
-            print("Deleted " + arg1)   
+                session.delete(rmDest)
+            print("Deleted " + rmDest)   
         elif confirm == "N" or confirm == "n":
             print("Operation Canceled")
             sys.exit(0)
     except Exception as e: 
-        print("Error: could not delete:\n" + e)
+        print("ERR: " + str(e) + "\n\nStack Trace:\n")
+        print(traceback.format_exc())
 
 def mkshare(arg1):
     try:
@@ -273,40 +276,35 @@ def mkshare(arg1):
         with yaspin(Spinners.bouncingBall, attrs=["bold"],) as sp:
             sp.text = "Operation in Progress"
             connect()
-            share = session.share_file_with_link(arg1)
-            time.sleep(1.0)
-        print("\n=== Created Share Successfully ==="+ bcolours.YELLOW + "\n\nLink: " + share.get_link() + "\nShare Contents: " + share.get_path() + "\n" + bcolours.DEFAULT)
+            share = session.share_file_with_link(shareDir)
+        print("\n=== Created Share ==="+ bcolours.YELLOW + "\n\nLink: " + share.get_link() + "\nShare Contents: " + share.get_path() + "\n" + bcolours.DEFAULT)
 
     except Exception as e:
-        print("Error: could not create file share:\n" + e)
+        print("ERR: " + str(e) + "\n\nStack Trace:\n")
+        print(traceback.format_exc())
 
-def rmshare(arg1):
+def rmshare(shareId):
     try:
-        print("Loading Share: " + arg1)
         confirm = ""
-        with yaspin(Spinners.bouncingBall, attrs=["bold"],) as sp:
-            sp.text = "Operation in Progress"
-            connect()
-            output = session.get_shares(arg1)
-            sharepath = ""
-            for i in output:
-                sharepath = i.get_path()
+        connect()
+        output = session.get_shares(shareId)
+        sharepath = ""
+        for i in output:
+            sharepath = i.get_path()
         if sharepath == "":
             print("Share not found")
         else:
             while confirm != "Y" and confirm != "N" and confirm != "y" and confirm != "n":
                 confirm = input('Are you sure you want to delete share ' + sharepath + '? [Y/N]')
             if confirm == "Y" or confirm == "y":
-                print("Deleting public share")
-                with yaspin(Spinners.bouncingBall, attrs=["bold"],) as sp:
-                    for i in output:
-                        sp.text = "Operation in Progress"
-                        session.delete_share(i.get_id())
-                        time.sleep(1.0)
+                for i in output:
+                    sp.text = "Operation in Progress"
+                    session.delete_share(i.get_id())
             print("\nOperation Completed")
 
     except Exception as e:
-        print("Error: could not delete file share:\n" + e)
+        print("ERR: " + str(e) + "\n\nStack Trace:\n")
+        print(traceback.format_exc())
 
 ##### END COMMAND DEFINITIONS #####
 
@@ -331,13 +329,33 @@ def main():
 
     parser_put = subparsers.add_parser('put', help='upload file')
     parser_put.add_argument('localFile', help="<local file>")
-    parser_put.add_argument('remoteDir', help="[remote directory]", defaults="/", nargs="?")
+    parser_put.add_argument('remoteDir', help="[remote directory]", default="/", nargs="?")
 
     parser_lsshare = subparsers.add_parser('lsshare', help='list shares')
     parser_lsshare.add_argument('lsDir', help="<directory>", default="/", nargs="?")
 
-    kwargs = vars(parser.parse_args())
-    globals()[kwargs.pop('subparser')](**kwargs)
+    parser_mkshare = subparsers.add_parser('mkshare', help='create file share')
+    parser_mkshare.add_argument('shareDir', help="<directory>", default="/", nargs="?")
+
+    parser_rmshare = subparsers.add_parser('rmshare', help='remove file share')
+    parser_rmshare.add_argument('shareId', help="<directory>", default="/", nargs="?")
+
+    parser_mkdir = subparsers.add_parser('mkdir', help='create new directory')
+    parser_mkdir.add_argument('mkDir', help="<directory>", default="/", nargs="?")
+
+    parser_rm = subparsers.add_parser('rm', help='delete file(s)')
+    parser_rm.add_argument('rmDest', help="<directory>", default="/", nargs="?")
+
+    try: #If no arguments are present, print usage output
+        kwargs = vars(parser.parse_args())
+        globals()[kwargs.pop('subparser')](**kwargs)
+    except Exception as e:
+        if (str(e) == "None"):
+            parser.print_help()
+            sys.exit(0)
+        else: #Print useful exception message if we have one
+            print("ERR: " + str(e) + "\n\nStack Trace:\n")
+            print(traceback.format_exc())
 
 def main_old():
 
