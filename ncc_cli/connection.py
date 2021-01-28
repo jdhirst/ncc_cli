@@ -1,7 +1,7 @@
 #This file deals with connections to the NextCloud server
 import os,configparser,sys,getpass,base64,traceback
 import owncloud as nclib
-from utils import *
+from ncc_cli.utils import *
 
 def ConfigSectionMap(Config, section):
     dict1 = {}

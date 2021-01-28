@@ -1,6 +1,6 @@
 # This file contains useful functions dealing with file transfers
-import time,multiprocessing
-from connection import *
+import time,multiprocessing,os,traceback
+from ncc_cli.connection import *
 from tqdm import tqdm
 
 def dl_getsize(session, dl_rpath):

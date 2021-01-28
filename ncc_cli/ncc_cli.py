@@ -5,8 +5,8 @@
 import sys,os,subprocess,configparser,time,argparse,traceback
 
 # Import modular code (the monolithic script was very complicated and difficult to maintain)
-from commands import *
-from utils import *
+from ncc_cli.commands import *
+from ncc_cli.utils import *
 
 version = "0.0.7" #Define current version
 

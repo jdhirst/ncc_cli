@@ -3,8 +3,8 @@ import humanize,multiprocessing
 from yaspin import yaspin
 from yaspin.spinners import Spinners
 from texttable import Texttable
-from connection import *
-from transfer import *
+from ncc_cli.connection import *
+from ncc_cli.transfer import *
 
 def ls(lsDir,longOutput=False):
     try:
