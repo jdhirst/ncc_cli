@@ -19,6 +19,7 @@ setuptools.setup(
         'tqdm',
         'yaspin',
         'texttable',
+        'configparser'
     ],
     classifiers=[
         "Programming Language :: Python :: 3.8",
